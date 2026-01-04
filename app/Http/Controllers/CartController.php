@@ -29,22 +29,32 @@ class CartController extends Controller
             ->where('product_id', $productId)
             ->first();
 
+        $quantity = $request->quantity ?? 1;
+
         if ($cartItem) {
-            $cartItem->increment('quantity');
+            $cartItem->increment('quantity', $quantity);
         } else {
             Cart::create([
                 'user_id' => auth()->id(),
                 'product_id' => $productId,
-                'quantity' => $request->quantity
+                'quantity' => $quantity
             ]);
         }
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Product added to cart'
-        ]);
+        // Check if AJAX request
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Product added to cart',
+                'cart_count' => Cart::where('user_id', auth()->id())->count()
+            ]);
+        }
+
+        // Regular request - redirect back with flash message
+        return redirect()->back()->with('success', 'Product added to cart successfully!');
     }
 
+    
     public function update(Request $request, $id)
     {
         $request->validate([

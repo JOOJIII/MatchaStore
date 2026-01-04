@@ -8,12 +8,12 @@ use App\Http\Controllers\WishlistController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\FeedbackController;
+use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Auth\ResetPasswordController;
-// TAMBAHKAN INI:
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
 
 // Public routes
@@ -45,6 +45,11 @@ Route::middleware(['auth'])->group(function () {
     // Logout
     Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
     
+    // Profile routes
+    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password');
+    
     // Cart routes
     Route::prefix('cart')->group(function () {
         Route::get('/', [CartController::class, 'index'])->name('cart.index');
@@ -57,6 +62,9 @@ Route::middleware(['auth'])->group(function () {
     Route::prefix('wishlist')->group(function () {
         Route::get('/', [WishlistController::class, 'index'])->name('wishlist.index');
         Route::post('/toggle/{product}', [WishlistController::class, 'toggle'])->name('wishlist.toggle');
+        Route::delete('/clear', [WishlistController::class, 'clear'])->name('wishlist.clear');
+        Route::post('/add-all-to-cart', [WishlistController::class, 'addAllToCart'])->name('wishlist.addAllToCart');
+        Route::post('/move-to-cart/{product}', [WishlistController::class, 'moveToCart'])->name('wishlist.moveToCart');
     });
 
     // Comment routes
@@ -70,10 +78,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/checkout/pending/{order}', [CheckoutController::class, 'pending'])->name('checkout.pending');
     Route::get('/checkout/error', [CheckoutController::class, 'error'])->name('checkout.error');
 
-    
     // Order routes
-    Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
-    Route::get('/orders/{id}', [OrderController::class, 'show'])->name('orders.show');
     Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
     Route::get('/orders/{id}', [OrderController::class, 'show'])->name('orders.show');
     Route::put('/orders/{id}/cancel', [OrderController::class, 'cancel'])->name('orders.cancel');
@@ -106,15 +111,6 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::get('/feedbacks', [DashboardController::class, 'feedbacks'])->name('feedbacks');
     Route::post('/feedbacks/{feedback}/status', [DashboardController::class, 'updateFeedbackStatus'])->name('feedbacks.status');
     Route::get('/feedbacks/{feedback}/details', [DashboardController::class, 'feedbackDetails'])->name('feedbacks.details');
-});
-
-// Wishlist routes
-Route::prefix('wishlist')->group(function () {
-    Route::get('/', [WishlistController::class, 'index'])->name('wishlist.index');
-    Route::post('/toggle/{product}', [WishlistController::class, 'toggle'])->name('wishlist.toggle');
-    Route::delete('/clear', [WishlistController::class, 'clear'])->name('wishlist.clear');
-    Route::post('/add-all-to-cart', [WishlistController::class, 'addAllToCart'])->name('wishlist.addAllToCart');
-    Route::post('/move-to-cart/{product}', [WishlistController::class, 'moveToCart'])->name('wishlist.moveToCart');
 });
 
 // Midtrans callback

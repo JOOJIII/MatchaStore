@@ -103,6 +103,7 @@
 
                     <div class="absolute right-0 top-full pt-2 w-48 bg-white text-gray-800 rounded-lg shadow-xl py-2 
                                 hidden group-hover:block z-50">
+                        <a href="{{ route('profile.edit') }}" class="block px-4 py-2 hover:bg-gray-100">Profile</a>
                         <a href="{{ route('orders.index') }}" class="block px-4 py-2 hover:bg-gray-100">My Orders</a>
                         <a href="{{ route('wishlist.index') }}" class="block px-4 py-2 hover:bg-gray-100">Wishlist</a>
 
@@ -147,6 +148,7 @@
                     <a href="{{ route('home') }}" class="hover:text-green-300 transition">Home</a>
                     <a href="{{ route('products.index') }}" class="hover:text-green-300 transition">Products</a>
                     @auth
+                        <a href="{{ route('profile.edit') }}" class="hover:text-green-300 transition">Profile</a>
                         <a href="{{ route('cart.index') }}" class="hover:text-green-300 transition">Cart</a>
                         <a href="{{ route('wishlist.index') }}" class="hover:text-green-300 transition">Wishlist</a>
                         <a href="{{ route('orders.index') }}" class="hover:text-green-300 transition">My Orders</a>
@@ -218,5 +220,7 @@
     </script>
     
     @stack('scripts')
+
+    @include('partials.tawk-to')
 </body>
 </html>

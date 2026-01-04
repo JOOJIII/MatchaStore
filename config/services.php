@@ -54,6 +54,12 @@ return [
         'error_url' => env('APP_URL') . '/checkout/error',
         'unfinish_url' => env('APP_URL') . '/checkout/finish',
     ],
-
+    
+    'tawk_to' => [
+        'enabled' => env('TAWK_TO_ENABLED', false),
+        'property_id' => env('TAWK_TO_PROPERTY_ID', ''),
+        'widget_id' => env('TAWK_TO_WIDGET_ID', 'default'),
+        'api_key' => env('TAWK_TO_API_KEY', ''), // Optional: for secure mode
+    ],
 
 ];
