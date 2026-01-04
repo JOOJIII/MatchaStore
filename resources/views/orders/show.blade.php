@@ -27,6 +27,7 @@
     </nav>
     
     <!-- Order Header -->
+     
     <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
         <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
             <div>
@@ -46,26 +47,95 @@
                 </div>
             </div>
             
-            <div class="mt-4 md:mt-0">
+            <div class="mt-4 md:mt-0 flex flex-col gap-2">
+                <!-- Check Payment Status Button -->
+                @if($order->payment_status == 'pending' && $order->status == 'pending')
+                <form action="{{ route('orders.check-status', $order->id) }}" method="POST" class="inline">
+                    @csrf
+                    <button type="submit" 
+                            class="w-full px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium">
+                        <i class="fas fa-sync mr-2"></i>Check Payment Status
+                    </button>
+                </form>
+                @endif
+                
                 @if($order->status == 'pending')
                 <form action="{{ route('orders.cancel', $order->id) }}" method="POST" class="inline">
                     @csrf
                     @method('PUT')
                     <button type="submit" 
                             onclick="return confirm('Are you sure you want to cancel this order?')"
-                            class="px-6 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition font-medium">
+                            class="w-full px-6 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition font-medium">
                         <i class="fas fa-times mr-2"></i>Cancel Order
                     </button>
                 </form>
                 @endif
                 
                 <button onclick="reorder({{ $order->id }})" 
-                        class="ml-2 px-6 py-2 btn-matcha rounded-lg font-medium">
+                        class="w-full px-6 py-2 btn-matcha rounded-lg font-medium">
                     <i class="fas fa-redo mr-2"></i>Reorder
                 </button>
             </div>
         </div>
+    </div>
         
+    <!-- PAYMENT PENDING ALERT - ADD THIS SECTION -->
+    @if($order->canContinuePayment())
+    <div class="bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl shadow-lg p-6 mb-6 animate-pulse">
+        <div class="flex items-start">
+            <div class="flex-shrink-0">
+                <div class="w-12 h-12 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+                    <i class="fas fa-exclamation-triangle text-2xl"></i>
+                </div>
+            </div>
+            <div class="ml-4 flex-1">
+                <h3 class="text-xl font-bold mb-2">Payment Required</h3>
+                <p class="mb-4">Your order is waiting for payment. Complete your payment to process this order.</p>
+                
+                @if($order->isPaymentExpired())
+                    <div class="bg-red-900 bg-opacity-50 rounded-lg p-3 mb-4">
+                        <i class="fas fa-clock mr-2"></i>
+                        Payment link has expired (24 hours). Please contact support or create a new order.
+                    </div>
+                @else
+                    <div class="flex flex-col sm:flex-row gap-3">
+                        <a href="{{ $order->getPaymentUrl() }}" 
+                        target="_blank"
+                        class="flex-1 bg-white text-orange-600 px-6 py-3 rounded-lg font-bold text-center hover:bg-gray-100 transition">
+                            <i class="fas fa-credit-card mr-2"></i>Continue Payment Now
+                        </a>
+                        
+                        <form action="{{ route('orders.check-status', $order->id) }}" method="POST" class="flex-1">
+                            @csrf
+                            <button type="submit" 
+                                    class="w-full bg-white bg-opacity-20 border-2 border-white px-6 py-3 rounded-lg font-bold hover:bg-opacity-30 transition">
+                                <i class="fas fa-sync mr-2"></i>Refresh Status
+                            </button>
+                        </form>
+                    </div>
+                    
+                    <p class="text-sm mt-3 opacity-90">
+                        <i class="fas fa-info-circle mr-1"></i>
+                        Payment link expires in {{ $order->created_at->addHours(24)->diffForHumans() }}
+                    </p>
+                @endif
+            </div>
+        </div>
+    </div>
+    @endif
+
+    <!-- Show success message if paid -->
+    @if($order->payment_status == 'paid')
+    <div class="bg-green-50 border-l-4 border-green-500 p-4 mb-6 rounded-lg">
+        <div class="flex items-center">
+            <i class="fas fa-check-circle text-green-500 text-xl mr-3"></i>
+            <div>
+                <p class="font-semibold text-green-800">Payment Confirmed</p>
+                <p class="text-green-700 text-sm">Your payment has been received and your order is being processed.</p>
+            </div>
+        </div>
+    </div>
+    @endif
         <!-- Order Progress -->
         <div class="mb-8">
             <h3 class="font-semibold text-lg mb-4">Order Progress</h3>
@@ -122,25 +192,46 @@
             
             <!-- Payment Information -->
             <div class="bg-gray-50 rounded-lg p-4">
-                <h4 class="font-semibold mb-3">Payment Information</h4>
-                <div class="space-y-2 text-gray-700">
-                    <div class="flex justify-between">
-                        <span>Payment Method:</span>
-                        <span class="font-medium">{{ ucfirst($order->payment_method) }}</span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span>Payment Status:</span>
+            <h4 class="font-semibold mb-3">Payment Information</h4>
+
+            <div class="space-y-2 text-gray-700">
+                <div class="flex justify-between">
+                    <span>Payment Method:</span>
+                    <span class="font-medium">
+                        {{ ucfirst($order->payment_method) }}
+                    </span>
+                </div>
+
+                <div class="flex justify-between">
+                    <span>Payment Status:</span>
+
+                    @if($order->payment_status === 'paid')
                         <span class="font-medium text-green-600">
                             <i class="fas fa-check-circle mr-1"></i>Paid
                         </span>
-                    </div>
-                    @if($order->payment)
-                    <div class="flex justify-between">
-                        <span>Transaction ID:</span>
-                        <span class="font-mono text-sm">{{ $order->payment->transaction_id }}</span>
-                    </div>
+                    @elseif($order->payment_status === 'pending')
+                        <span class="font-medium text-yellow-600">
+                            <i class="fas fa-clock mr-1"></i>Pending
+                        </span>
+                    @else
+                        <span class="font-medium text-red-600">
+                            <i class="fas fa-times-circle mr-1"></i>Failed
+                        </span>
                     @endif
                 </div>
+
+                @if(
+                    $order->payment_status === 'paid' &&
+                    $order->payment &&
+                    $order->payment->transaction_id
+                )
+                <div class="flex justify-between">
+                    <span>Transaction ID:</span>
+                    <span class="font-mono text-sm">
+                        {{ $order->payment->transaction_id }}
+                    </span>
+                </div>
+                @endif
             </div>
             
             <!-- Order Summary -->
@@ -169,7 +260,75 @@
             </div>
         </div>
     </div>
-    
+
+    <!-- Payment Information Card -->
+    <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+        <h2 class="text-xl font-bold mb-4 flex items-center">
+            <i class="fas fa-credit-card text-matcha-green mr-2"></i>
+            Payment Information
+        </h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="bg-gray-50 rounded-lg p-4">
+                <p class="text-sm text-gray-600 mb-1">Payment Method</p>
+                <p class="font-semibold text-lg">{{ ucfirst($order->payment_method) }}</p>
+            </div>
+            
+            <div class="bg-gray-50 rounded-lg p-4">
+                <p class="text-sm text-gray-600 mb-1">Payment Status</p>
+                <div class="flex items-center">
+                    @if($order->payment_status == 'paid')
+                        <span class="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">
+                            <i class="fas fa-check-circle mr-1"></i>Paid
+                        </span>
+                    @elseif($order->payment_status == 'pending')
+                        <span class="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm font-medium">
+                            <i class="fas fa-clock mr-1"></i>Pending
+                        </span>
+                    @else
+                        <span class="px-3 py-1 bg-red-100 text-red-800 rounded-full text-sm font-medium">
+                            <i class="fas fa-times-circle mr-1"></i>Failed
+                        </span>
+                    @endif
+                </div>
+            </div>
+            
+            @if($order->payment)
+            <div class="bg-gray-50 rounded-lg p-4">
+                <p class="text-sm text-gray-600 mb-1">Transaction ID</p>
+                <p class="font-mono text-sm">{{ $order->payment->transaction_id }}</p>
+            </div>
+            
+            <div class="bg-gray-50 rounded-lg p-4">
+                <p class="text-sm text-gray-600 mb-1">Payment Type</p>
+                <p class="font-semibold">{{ ucfirst(str_replace('_', ' ', $order->payment->payment_type)) }}</p>
+            </div>
+            @endif
+        </div>
+        
+        @if($order->canContinuePayment())
+        <div class="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+            <div class="flex items-start">
+                <i class="fas fa-info-circle text-blue-500 mr-3 mt-1"></i>
+                <div class="flex-1">
+                    <p class="text-blue-800 font-medium mb-2">How to Complete Payment:</p>
+                    <ol class="text-sm text-blue-700 space-y-1 list-decimal list-inside">
+                        <li>Click the "Continue Payment Now" button above</li>
+                        <li>You'll be redirected to Midtrans payment page</li>
+                        <li>Choose your preferred payment method</li>
+                        <li>Complete the payment process</li>
+                        <li>You'll be redirected back to this page automatically</li>
+                    </ol>
+                    <p class="text-sm text-blue-600 mt-2">
+                        <i class="fas fa-shield-alt mr-1"></i>
+                        Secure payment powered by Midtrans
+                    </p>
+                </div>
+            </div>
+        </div>
+        @endif
+    </div>
+
     <!-- Order Items -->
     <div class="bg-white rounded-xl shadow-lg p-6 mb-8">
         <h2 class="text-xl font-bold mb-6">Order Items ({{ $order->items->count() }})</h2>
@@ -278,28 +437,100 @@
 <script>
     function reorder(orderId) {
         if (confirm('Add all items from this order to cart?')) {
+            // Show loading state
+            const button = event.target;
+            const originalHTML = button.innerHTML;
+            button.disabled = true;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Adding...';
+            
             fetch(`/orders/${orderId}/reorder`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'X-Requested-With': 'XMLHttpRequest'
                 }
             })
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    alert(data.message);
-                    // Update cart count in navbar
-                    const cartCount = document.querySelector('.cart-count');
-                    if (cartCount && data.cart_count) {
-                        cartCount.textContent = data.cart_count;
+                    // Show success message
+                    showNotification(data.message, 'success');
+                    
+                    // Update cart count in navbar if element exists
+                    const cartCountElements = document.querySelectorAll('.cart-count, [data-cart-count]');
+                    cartCountElements.forEach(element => {
+                        element.textContent = data.cart_count;
+                        
+                        // Add animation
+                        element.classList.add('animate-bounce');
+                        setTimeout(() => {
+                            element.classList.remove('animate-bounce');
+                        }, 1000);
+                    });
+                    
+                    // Optionally redirect to cart after a delay
+                    if (data.added_count > 0) {
+                        setTimeout(() => {
+                            if (confirm('Items added to cart. Would you like to view your cart?')) {
+                                window.location.href = '/cart';
+                            }
+                        }, 1500);
                     }
+                } else {
+                    showNotification('Error adding items to cart', 'error');
                 }
+                
+                // Restore button
+                button.disabled = false;
+                button.innerHTML = originalHTML;
             })
             .catch(error => {
-                alert('Error reordering');
+                console.error('Error:', error);
+                showNotification('Error adding items to cart', 'error');
+                
+                // Restore button
+                button.disabled = false;
+                button.innerHTML = originalHTML;
             });
         }
     }
+
+    function showNotification(message, type = 'success') {
+        // Remove existing notifications
+        const existing = document.querySelector('.custom-notification');
+        if (existing) existing.remove();
+        
+        const notification = document.createElement('div');
+        notification.className = `fixed top-4 right-4 px-6 py-4 rounded-lg shadow-xl z-50 custom-notification transform transition-all duration-300 ${
+            type === 'success' 
+                ? 'bg-green-500 text-white' 
+                : 'bg-red-500 text-white'
+        }`;
+        notification.style.transform = 'translateX(400px)';
+        notification.innerHTML = `
+            <div class="flex items-center">
+                <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'} mr-3 text-xl"></i>
+                <div>
+                    <p class="font-semibold">${type === 'success' ? 'Success!' : 'Error'}</p>
+                    <p class="text-sm">${message}</p>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(notification);
+        
+        // Slide in
+        setTimeout(() => {
+            notification.style.transform = 'translateX(0)';
+        }, 100);
+        
+        // Auto remove after 5 seconds
+        setTimeout(() => {
+            notification.style.transform = 'translateX(400px)';
+            setTimeout(() => notification.remove(), 300);
+        }, 5000);
+    }
+
 </script>
 @endsection

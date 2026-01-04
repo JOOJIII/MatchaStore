@@ -150,7 +150,7 @@
                     </div>
                 </div>
                 <div class="mb-4">
-                    <textarea name="content" rows="3" class="w-full border rounded-lg p-3 focus:ring-2 focus:ring-matcha-green focus:border-transparent" placeholder="Share your experience with this product..." required></textarea>
+                    <textarea name="content" rows="3" class="w-full border rounded-lg p-3 focus:ring-2 focus:ring-matcha-green focus:border-transparent" minlength="5" placeholder="Share your experience with this product..." required></textarea>
                 </div>
                 <button type="submit" class="btn-matcha px-6 py-2 rounded-lg">Submit Review</button>
             </form>

@@ -54,10 +54,7 @@
                 <a href="{{ route('admin.orders') }}" class="nav-link {{ request()->routeIs('admin.orders*') ? 'active' : '' }}">
                     <i class="fas fa-shopping-cart mr-2"></i>Orders
                 </a>
-                <!-- TAMBAHKAN ROUTE UNTUK USERS JIKA DIBUTUHKAN -->
-                <!-- <a href="{{ route('admin.users.index') }}" class="nav-link">
-                    <i class="fas fa-users mr-2"></i>Users
-                </a> -->
+     
                 <a href="{{ route('admin.feedbacks') }}" class="nav-link {{ request()->routeIs('admin.feedbacks*') ? 'active' : '' }}">
                     <i class="fas fa-comments mr-2"></i>Feedbacks
                 </a>

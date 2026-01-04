@@ -111,6 +111,21 @@
     <!-- Orders List -->
     @if($orders->count() > 0)
     <div class="bg-white rounded-xl shadow overflow-hidden mb-8">
+    <div class="px-6 py-4 border-b">
+        <div class="flex justify-between items-center">
+            <div>
+                <h2 class="text-xl font-semibold">Your Orders</h2>
+                <p class="text-gray-500 text-sm">{{ $orders->total() }} total orders</p>
+            </div>
+            <div class="flex items-center space-x-4">
+                @if($pendingCount > 0)
+                <button onclick="checkPendingOrders()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+                    <i class="fas fa-sync mr-2"></i>Check Pending Payments ({{ $pendingCount }})
+                </button>
+                @endif
+            </div>
+        </div>
+    </div>
         <div class="overflow-x-auto">
             <table class="w-full">
                 <thead class="bg-gray-50">
@@ -126,7 +141,7 @@
                 </thead>
                 <tbody class="divide-y divide-gray-100">
                     @foreach($orders as $order)
-                    <tr class="hover:bg-gray-50 transition">
+                    <tr class="hover:bg-gray-50 transition" data-order-id="{{ $order->id }}" data-order-status="{{ $order->status }}">
                         <!-- Order Number -->
                         <td class="py-4 px-6">
                             <div class="font-mono font-semibold text-gray-900">
@@ -208,32 +223,50 @@
 
                         <!-- Actions -->
                         <td class="py-4 px-6">
-                            <div class="flex space-x-2">
-                                <a href="{{ route('orders.show', $order->id) }}" 
-                                   class="bg-green-500 px-4 py-2 bg-matcha-green text-white rounded-lg hover:bg-green-800 transition text-sm">
-                                    <i class="fas fa-eye mr-1"></i> View
+                        <div class="flex flex-col space-y-2">
+                            <!-- Continue Payment Button (if pending) -->
+                            @if($order->canContinuePayment())
+                                <a href="{{ $order->getPaymentUrl() }}" 
+                                target="_blank"
+                                class="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition text-sm text-center font-medium">
+                                    <i class="fas fa-credit-card mr-1"></i> Continue Payment
                                 </a>
                                 
-                                @if($order->status == 'pending')
-                                <form action="{{ route('orders.cancel', $order->id) }}" method="POST" class="inline">
-                                    @csrf
-                                    @method('PUT')
-                                    <button type="submit" 
-                                            onclick="return confirm('Are you sure you want to cancel this order?')"
-                                            class="px-4 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition text-sm">
-                                        <i class="fas fa-times mr-1"></i> Cancel
-                                    </button>
-                                </form>
+                                @if($order->isPaymentExpired())
+                                    <span class="text-xs text-red-600 text-center">
+                                        <i class="fas fa-exclamation-circle"></i> Payment link expired
+                                    </span>
                                 @endif
-                                
-                                @if($order->status == 'completed')
-                                <button onclick="reorder({{ $order->id }})" 
-                                        class="px-4 py-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition text-sm">
-                                    <i class="fas fa-redo mr-1"></i> Reorder
+                            @endif
+                            
+                            <!-- View Order Button -->
+                            <a href="{{ route('orders.show', $order->id) }}" 
+                            class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-800 transition text-sm text-center">
+                                <i class="fas fa-eye mr-1"></i> View Details
+                            </a>
+                            
+                            <!-- Cancel Button (only for pending) -->
+                            @if($order->status == 'pending')
+                            <form action="{{ route('orders.cancel', $order->id) }}" method="POST" class="inline">
+                                @csrf
+                                @method('PUT')
+                                <button type="submit" 
+                                        onclick="return confirm('Are you sure you want to cancel this order?')"
+                                        class="w-full px-4 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition text-sm">
+                                    <i class="fas fa-times mr-1"></i> Cancel
                                 </button>
-                                @endif
-                            </div>
-                        </td>
+                            </form>
+                            @endif
+                            
+                            <!-- Reorder Button (only for completed) -->
+                            @if($order->status == 'completed')
+                            <button onclick="reorder({{ $order->id }})" 
+                                    class="px-4 py-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition text-sm">
+                                <i class="fas fa-redo mr-1"></i> Reorder
+                            </button>
+                            @endif
+                        </div>
+                    </td>
                     </tr>
                     @endforeach
                 </tbody>
@@ -355,6 +388,48 @@
 
 @push('scripts')
 <script>
+        function checkPendingOrders() {
+            if (confirm('Check payment status for all pending orders?')) {
+                // Show loading
+                const button = event.target;
+                const originalText = button.innerHTML;
+                button.disabled = true;
+                button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Checking...';
+                
+                // Collect pending order IDs
+                const pendingOrders = [];
+                document.querySelectorAll('[data-order-status="pending"]').forEach(el => {
+                    pendingOrders.push(el.dataset.orderId);
+                });
+                
+                // Check each order
+                let completed = 0;
+                pendingOrders.forEach(orderId => {
+                    fetch(`/orders/${orderId}/check-status`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        completed++;
+                        if (completed === pendingOrders.length) {
+                            // Reload page when all checks complete
+                            location.reload();
+                        }
+                    })
+                    .catch(error => {
+                        completed++;
+                        if (completed === pendingOrders.length) {
+                            location.reload();
+                        }
+                    });
+                });
+            }
+        }
+
     // Apply filters
     function applyFilters() {
         const status = document.getElementById('statusFilter').value;
@@ -382,33 +457,105 @@
     function resetFilters() {
         window.location.href = "{{ route('orders.index') }}";
     }
+
+    function showNotification(message, type = 'success') {
+        // Remove existing notifications
+        const existing = document.querySelector('.custom-notification');
+        if (existing) existing.remove();
+        
+        const notification = document.createElement('div');
+        notification.className = `fixed top-4 right-4 px-6 py-4 rounded-lg shadow-xl z-50 custom-notification transform transition-all duration-300 ${
+            type === 'success' 
+                ? 'bg-green-500 text-white' 
+                : 'bg-red-500 text-white'
+        }`;
+        notification.style.transform = 'translateX(400px)';
+        notification.innerHTML = `
+            <div class="flex items-center">
+                <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'} mr-3 text-xl"></i>
+                <div>
+                    <p class="font-semibold">${type === 'success' ? 'Success!' : 'Error'}</p>
+                    <p class="text-sm">${message}</p>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(notification);
+        
+        // Slide in
+        setTimeout(() => {
+            notification.style.transform = 'translateX(0)';
+        }, 100);
+        
+        // Auto remove after 5 seconds
+        setTimeout(() => {
+            notification.style.transform = 'translateX(400px)';
+            setTimeout(() => notification.remove(), 300);
+        }, 5000);
+    }
     
     // Reorder function
     function reorder(orderId) {
         if (confirm('Add all items from this order to cart?')) {
+            // Show loading state
+            const button = event.target;
+            const originalHTML = button.innerHTML;
+            button.disabled = true;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Adding...';
+            
             fetch(`/orders/${orderId}/reorder`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'X-Requested-With': 'XMLHttpRequest'
                 }
             })
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    alert(data.message);
-                    // Update cart count in navbar
-                    const cartCount = document.querySelector('.cart-count');
-                    if (cartCount && data.cart_count) {
-                        cartCount.textContent = data.cart_count;
+                    // Show success message
+                    showNotification(data.message, 'success');
+                    
+                    // Update cart count in navbar if element exists
+                    const cartCountElements = document.querySelectorAll('.cart-count, [data-cart-count]');
+                    cartCountElements.forEach(element => {
+                        element.textContent = data.cart_count;
+                        
+                        // Add animation
+                        element.classList.add('animate-bounce');
+                        setTimeout(() => {
+                            element.classList.remove('animate-bounce');
+                        }, 1000);
+                    });
+                    
+                    // Optionally redirect to cart after a delay
+                    if (data.added_count > 0) {
+                        setTimeout(() => {
+                            if (confirm('Items added to cart. Would you like to view your cart?')) {
+                                window.location.href = '/cart';
+                            }
+                        }, 1500);
                     }
+                } else {
+                    showNotification('Error adding items to cart', 'error');
                 }
+                
+                // Restore button
+                button.disabled = false;
+                button.innerHTML = originalHTML;
             })
             .catch(error => {
-                alert('Error reordering');
+                console.error('Error:', error);
+                showNotification('Error adding items to cart', 'error');
+                
+                // Restore button
+                button.disabled = false;
+                button.innerHTML = originalHTML;
             });
         }
     }
+
     
     // Initialize filters from URL
     document.addEventListener('DOMContentLoaded', function() {

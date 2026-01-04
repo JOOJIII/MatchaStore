@@ -65,6 +65,11 @@ Route::middleware(['auth'])->group(function () {
     // Checkout routes
     Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout.index');
     Route::post('/checkout/process', [CheckoutController::class, 'process'])->name('checkout.process');
+    Route::get('/checkout/finish', [CheckoutController::class, 'finish'])->name('checkout.finish');
+    Route::get('/checkout/success/{order}', [CheckoutController::class, 'success'])->name('checkout.success');
+    Route::get('/checkout/pending/{order}', [CheckoutController::class, 'pending'])->name('checkout.pending');
+    Route::get('/checkout/error', [CheckoutController::class, 'error'])->name('checkout.error');
+
     
     // Order routes
     Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
@@ -73,38 +78,34 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/orders/{id}', [OrderController::class, 'show'])->name('orders.show');
     Route::put('/orders/{id}/cancel', [OrderController::class, 'cancel'])->name('orders.cancel');
     Route::post('/orders/{id}/reorder', [OrderController::class, 'reorder'])->name('orders.reorder');
+    Route::post('/orders/{id}/check-status', [OrderController::class, 'checkStatus'])->name('orders.check-status'); 
 
     // Feedback routes
     Route::get('/feedback', [FeedbackController::class, 'create'])->name('feedback.create');
     Route::post('/feedback', [FeedbackController::class, 'store'])->name('feedback.store');
 });
 
-// Admin routes - Using admin middleware
+// Admin routes
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
-    Route::get('/users', [DashboardController::class, 'users'])->name('users.index');
-    // Admin Product Routes - PERHATIKAN PERUBAHAN DI SINI
-    Route::get('/products', [AdminProductController::class, 'index'])->name('products.index');
-    Route::get('/products/create', [AdminProductController::class, 'create'])->name('products.create');
-    Route::post('/products', [AdminProductController::class, 'store'])->name('products.store');
-    Route::get('/products/{product}', [AdminProductController::class, 'show'])->name('products.show');
-    Route::get('/products/{product}/edit', [AdminProductController::class, 'edit'])->name('products.edit');
-    Route::put('/products/{product}', [AdminProductController::class, 'update'])->name('products.update');
-    Route::delete('/products/{product}', [AdminProductController::class, 'destroy'])->name('products.destroy');
+    
+    // Admin Product Routes
+    Route::resource('products', AdminProductController::class);
     Route::post('/products/{product}/toggle-featured', [AdminProductController::class, 'toggleFeatured'])->name('products.toggle-featured');
 
     // Admin Order Routes
     Route::get('/orders', [DashboardController::class, 'orders'])->name('orders');
-    // Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
-    Route::post('/orders/{id}/status', [DashboardController::class, 'updateOrderStatus'])->name('orders.status');
-    Route::get('/orders/{id}', [OrderController::class, 'show'])->name('orders.show');
-    Route::put('/orders/{id}/cancel', [OrderController::class, 'cancel'])->name('orders.cancel');
-    Route::post('/orders/{id}/reorder', [OrderController::class, 'reorder'])->name('orders.reorder');
+    Route::get('/orders/{order}', function($id) {
+        $order = \App\Models\Order::with(['items.product', 'user', 'payment'])->findOrFail($id);
+        return view('admin.orders.show', compact('order'));
+    })->name('orders.details');
+    Route::post('/orders/{order}/status', [DashboardController::class, 'updateOrderStatus'])->name('orders.status');
+    Route::post('/orders/{id}/check-status', [OrderController::class, 'checkStatus'])->name('orders.check-status'); 
 
     // Admin Feedback Routes
     Route::get('/feedbacks', [DashboardController::class, 'feedbacks'])->name('feedbacks');
-    Route::post('/feedbacks/{id}/status', [DashboardController::class, 'updateFeedbackStatus'])->name('feedbacks.status');
-    Route::get('/feedbacks/{id}/details', [DashboardController::class, 'feedbackDetails'])->name('feedbacks.details');
+    Route::post('/feedbacks/{feedback}/status', [DashboardController::class, 'updateFeedbackStatus'])->name('feedbacks.status');
+    Route::get('/feedbacks/{feedback}/details', [DashboardController::class, 'feedbackDetails'])->name('feedbacks.details');
 });
 
 // Wishlist routes
