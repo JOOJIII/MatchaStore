@@ -91,7 +91,7 @@
                     @include('partials.pending-payment-alert')
                     <a href="{{ route('home') }}" class="hover:text-green-300 transition">Home</a>
                     <a href="{{ route('products.index') }}" class="hover:text-green-300 transition">Products</a>
-                    <a href="#" class="hover:text-green-300 transition">About</a>
+                    <a href="{{ route('about') }}" class="hover:text-green-300 transition">About</a>
                     
                     @auth
                     <div class="relative group">

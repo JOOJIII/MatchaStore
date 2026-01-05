@@ -20,6 +20,7 @@ use App\Http\Controllers\Admin\ProductController as AdminProductController;
 Route::get('/', [ProductController::class, 'index'])->name('home');
 Route::get('/products', [ProductController::class, 'index'])->name('products.index');
 Route::get('/products/{id}', [ProductController::class, 'show'])->name('products.show');
+Route::view('/about', 'about.index')->name('about');
 
 // Authentication routes
 Route::middleware('guest')->group(function () {
